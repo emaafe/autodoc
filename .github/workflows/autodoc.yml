@@ -1,4 +1,4 @@
-name: AutoDoc Reusable Workflow
+name: AutoDoc Documentation
 
 on:
   workflow_call:
@@ -15,30 +15,25 @@ jobs:
       pull-requests: write
 
     steps:
-      #Checkout EXACTO del PR
       - name: Checkout target repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      #Checkout AutoDoc
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      #Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      #Dependencies
       - name: Install dependencies
         run: pip install -r autodoc/requirements.txt
 
-      #Run AutoDoc
       - name: Run AutoDoc
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -48,38 +43,18 @@ jobs:
           PYTHONPATH: autodoc
         run: python autodoc/analyzer/main.py
 
-      #Guardar JSON
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: autodoc-report
           path: reports/output.json
 
-      #Guardar PDF
       - name: Upload PDF
         uses: actions/upload-artifact@v4
         with:
           name: autodoc-pdf
           path: reports/output.pdf
 
-      #Determinar si TODO es PASS
-      - name: Check if all PASS
-        id: check_pass
-        run: |
-          if grep -q '"final_status": "FAIL"' reports/output.json; then
-            echo "all_pass=false" >> $GITHUB_OUTPUT
-          elif grep -q '"final_status": "NEEDS REVIEW"' reports/output.json; then
-            echo "all_pass=false" >> $GITHUB_OUTPUT
-          else
-            echo "all_pass=true" >> $GITHUB_OUTPUT
-          fi
-
-      #Auto approve SOLO si PASS
-      - name: Auto approve PR
-        if: steps.check_pass.outputs.all_pass == 'true'
-        uses: hmarr/auto-approve-action@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   blocking-check:
     runs-on: ubuntu-latest
@@ -100,6 +75,7 @@ jobs:
         env:
           PYTHONPATH: autodoc
         run: python -m analyzer.check_blocking
+
 
   review-check:
     runs-on: ubuntu-latest
@@ -123,3 +99,40 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           PYTHONPATH: autodoc
         run: python -m analyzer.check_review
+
+
+  final-approve:
+    runs-on: ubuntu-latest
+    needs:
+      - autodoc
+      - blocking-check
+      - review-check
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    if: success()
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: autodoc-report
+          path: reports/
+
+      - name: Check if all PASS
+        id: check_pass
+        run: |
+          if grep -q '"final_status": "FAIL"' reports/output.json; then
+            echo "all_pass=false" >> $GITHUB_OUTPUT
+          elif grep -q '"final_status": "NEEDS REVIEW"' reports/output.json; then
+            echo "all_pass=false" >> $GITHUB_OUTPUT
+          else
+            echo "all_pass=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auto approve PR
+        if: steps.check_pass.outputs.all_pass == 'true'
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
