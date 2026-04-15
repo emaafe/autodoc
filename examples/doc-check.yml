@@ -3,6 +3,10 @@ name: AutoDoc Documentation
 on:
   pull_request:
 
+permissions:
+  contents: read
+  actions: read
+  
 jobs:
   autodoc:
     uses: emaafe/autodoc/.github/workflows/autodoc.yml@main
