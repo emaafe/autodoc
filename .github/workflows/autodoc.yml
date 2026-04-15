@@ -4,13 +4,20 @@ on:
   workflow_call:
     inputs:
       override:
-        description: "Override NEEDS REVIEW (true/false)"
+        description: "Override NEEDS REVIEW"
         required: false
         type: string
         default: "false"
     secrets:
       GEMINI_API_KEY:
         required: true
+
+  workflow_dispatch:
+    inputs:
+      override:
+        description: "Override NEEDS REVIEW"
+        required: true
+        default: "false"
 
 jobs:
   autodoc:
@@ -24,28 +31,28 @@ jobs:
       report-path: reports/output.json
 
     steps:
-      # 🔹 Checkout del repo cliente (código a analizar)
+      #Checkout repo cliente
       - name: Checkout target repository
         uses: actions/checkout@v4
 
-      # 🔹 Checkout de AutoDoc (herramienta)
+      #Checkout AutoDoc (herramienta)
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      # 🔹 Setup Python
+      #Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 🔹 Instalar dependencias
+      #Dependencias
       - name: Install dependencies
         run: pip install -r autodoc/requirements.txt
 
-      # 🔹 Ejecutar AutoDoc (FIX CRÍTICO: PYTHONPATH)
+      #Ejecutar AutoDoc
       - name: Run AutoDoc
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -56,14 +63,14 @@ jobs:
           PYTHONPATH: autodoc
         run: python autodoc/analyzer/main.py
 
-      # 🔹 Guardar JSON
+      #JSON
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: autodoc-report
           path: reports/output.json
 
-      # 🔹 Guardar PDF
+      #PDF
       - name: Upload PDF
         uses: actions/upload-artifact@v4
         with:
