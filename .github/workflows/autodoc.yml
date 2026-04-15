@@ -24,28 +24,28 @@ jobs:
       report-path: reports/output.json
 
     steps:
-      #Checkout del repo cliente (donde corre el PR)
+      # 🔹 Checkout del repo cliente (código a analizar)
       - name: Checkout target repository
         uses: actions/checkout@v4
 
-      #Checkout del repo AutoDoc (herramienta)
+      # 🔹 Checkout de AutoDoc (herramienta)
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      #Python
+      # 🔹 Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      #Instalar dependencias de AutoDoc
+      # 🔹 Instalar dependencias
       - name: Install dependencies
         run: pip install -r autodoc/requirements.txt
 
-      #Ejecutar AutoDoc
+      # 🔹 Ejecutar AutoDoc (FIX CRÍTICO: PYTHONPATH)
       - name: Run AutoDoc
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -53,16 +53,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PYTHONPATH: autodoc
         run: python autodoc/analyzer/main.py
 
-      #Guardar JSON
+      # 🔹 Guardar JSON
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: autodoc-report
           path: reports/output.json
 
-      #Guardar PDF
+      # 🔹 Guardar PDF
       - name: Upload PDF
         uses: actions/upload-artifact@v4
         with:
@@ -88,7 +89,9 @@ jobs:
           path: reports/
 
       - name: Run blocking check
-        run: python -m autodoc.analyzer.check_blocking
+        env:
+          PYTHONPATH: autodoc
+        run: python -m analyzer.check_blocking
 
 
   review-check:
@@ -111,4 +114,5 @@ jobs:
       - name: Run review check
         env:
           AUTODOC_OVERRIDE: ${{ inputs.override }}
-        run: python -m autodoc.analyzer.check_review
+          PYTHONPATH: autodoc
+        run: python -m analyzer.check_review
