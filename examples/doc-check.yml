@@ -2,6 +2,12 @@ name: AutoDoc Documentation
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      override:
+        description: "Override NEEDS REVIEW"
+        required: true
+        default: "false"
 
 permissions:
   contents: write
@@ -10,5 +16,7 @@ permissions:
 jobs:
   autodoc:
     uses: emaafe/autodoc/.github/workflows/autodoc.yml@main
+    with:
+      override: ${{ github.event.inputs.override }}
     secrets:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
