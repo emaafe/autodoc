@@ -1,81 +1,67 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import requests
 from datetime import datetime, timezone
 
-from analyzer.ci_policy_loader import load_ci_policy
 
-
-def post_override_comment(pr_number: str):
+def is_pr_approved():
     token = os.getenv("GITHUB_TOKEN")
     repo = os.getenv("GITHUB_REPOSITORY")
-    actor = os.getenv("GITHUB_ACTOR")
+    pr_number = os.getenv("PR_NUMBER")
 
     if not token or not repo or not pr_number:
-        print("Skipping override comment (missing context)")
-        return
+        return False
 
-    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/reviews"
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json"
     }
 
-    message = f"""
-##AutoDoc Override Approved
+    response = requests.get(url, headers=headers)
 
-Override aprobado para PR #{pr_number} por **{actor}**.
+    if response.status_code != 200:
+        return False
 
-⚠ Para aplicar los cambios:
+    reviews = response.json()
 
-- Hacer commit vacío:
-  git commit --allow-empty -m "apply override"
-  git push
+    for review in reviews:
+        if review["state"] == "APPROVED":
+            return True
 
-- O usar **Re-run jobs**
-"""
-
-    response = requests.post(url, headers=headers, json={"body": message})
-
-    if response.status_code >= 300:
-        print("Failed to post override comment:", response.text)
-    else:
-        print("Override comment posted successfully")
+    return False
 
 
 def main():
     with open("reports/output.json") as f:
         data = json.load(f)
 
-    policy = load_ci_policy()
-
     actor = os.getenv("GITHUB_ACTOR", "unknown")
-    pr_number = os.getenv("PR_NUMBER")
-    event = os.getenv("GITHUB_EVENT_NAME")
 
+    has_fail = any(r["final_status"] == "FAIL" for r in data)
     has_review = any(r["final_status"] == "NEEDS REVIEW" for r in data)
 
     def log(msg):
         print(f"{datetime.now(timezone.utc).isoformat()} | user={actor} | {msg}")
 
-    if has_review:
-
-        log("NEEDS REVIEW detected")
-
-        if event == "workflow_dispatch":
-            log(f"Override applied for PR {pr_number}")
-
-            post_override_comment(pr_number)
-
-            return
-
-        log("Override required but not provided")
+    if has_fail:
+        log("FAIL detected - blocking merge")
         exit(1)
 
-    log("No review required - passing check")
+    if has_review:
+        log("NEEDS REVIEW detected")
+
+        if is_pr_approved():
+            log("PR approved - allowing merge")
+            return
+
+        log("Approval required")
+        exit(1)
+
+    log("All PASS - allowing merge")
 
 
 if __name__ == "__main__":

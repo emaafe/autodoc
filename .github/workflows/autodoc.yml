@@ -2,18 +2,8 @@ name: AutoDoc Reusable Workflow
 
 on:
   workflow_call:
-    inputs:
-      pr_number:
-        required: false
-        type: string
     secrets:
       GEMINI_API_KEY:
-        required: true
-
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "Pull Request number to approve"
         required: true
 
 jobs:
@@ -24,12 +14,11 @@ jobs:
       contents: write
       pull-requests: write
 
-    outputs:
-      report-path: reports/output.json
-
     steps:
       - name: Checkout target repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
@@ -48,10 +37,9 @@ jobs:
       - name: Run AutoDoc
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
           PYTHONPATH: autodoc
         run: python autodoc/analyzer/main.py
 
@@ -66,6 +54,26 @@ jobs:
         with:
           name: autodoc-pdf
           path: reports/output.pdf
+
+      - name: Auto approve PR if PASS
+        run: |
+          if grep -q '"final_status": "FAIL"' reports/output.json; then
+            echo "FAIL detected → no approve"
+            exit 0
+          fi
+
+          if grep -q '"final_status": "NEEDS REVIEW"' reports/output.json; then
+            echo "Needs review → no approve"
+            exit 0
+          fi
+
+          echo "All PASS → approving PR"
+
+          curl -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews \
+            -d '{"event":"APPROVE"}'
 
 
   blocking-check:
@@ -105,8 +113,7 @@ jobs:
 
       - run: python -m analyzer.check_review
         env:
-          PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PYTHONPATH: autodoc
