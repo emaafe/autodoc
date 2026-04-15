@@ -112,29 +112,32 @@ def format_method(entry: dict) -> str:
 def extract_reason(entry: dict) -> str:
     details = entry.get("details", {})
 
-    # 1. IA
-    ai = details.get("ai_evaluation")
-    if ai:
-        explanation = ai.get("explanation")
+    # 1. Prioridad: campo directo "reason"
+    reason = details.get("reason")
+    if reason:
+        return reason.strip()
 
-        if explanation:
-            return explanation.strip()
+    # 2. Explicación interna (estructura actual)
+    nested = details.get("details", {})
+    explanation = nested.get("explanation")
+    if explanation:
+        return explanation.strip()
 
-        # fallback según resultado
-        result = ai.get("result")
-        if result == "CONSISTENT":
-            return "Consistent according to AI"
-        if result == "INCONSISTENT":
-            return "Inconsistency detected between documentation and implementation"
-        if result == "UNCERTAIN":
-            return "AI could not determine consistency"
+    # 3. Resultado IA fallback
+    result = nested.get("result")
+    if result == "CONSISTENT":
+        return "Consistent according to AI"
+    if result == "INCONSISTENT":
+        return "Inconsistency detected"
+    if result == "UNCERTAIN":
+        return "AI could not determine consistency"
 
-    # 2. Rules
+    # 4. Rules fallback
     rules = details.get("rules_evaluation", {})
     issues = rules.get("issues", [])
 
     if issues:
         return issues[0].get("message", "Rule violation")
 
-    # 3. Default
+    # 5. Default
     return "No explicit reason provided by analysis"
