@@ -3,21 +3,18 @@ name: AutoDoc Reusable Workflow
 on:
   workflow_call:
     inputs:
-      override:
-        description: "Override NEEDS REVIEW"
+      pr_number:
         required: false
         type: string
-        default: "false"
     secrets:
       GEMINI_API_KEY:
         required: true
 
   workflow_dispatch:
     inputs:
-      override:
-        description: "Override NEEDS REVIEW"
+      pr_number:
+        description: "Pull Request number to approve"
         required: true
-        default: "false"
 
 jobs:
   autodoc:
@@ -31,46 +28,39 @@ jobs:
       report-path: reports/output.json
 
     steps:
-      #Checkout repo cliente
       - name: Checkout target repository
         uses: actions/checkout@v4
 
-      #Checkout AutoDoc (herramienta)
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      #Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      #Dependencias
       - name: Install dependencies
         run: pip install -r autodoc/requirements.txt
 
-      #Ejecutar AutoDoc
       - name: Run AutoDoc
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          AUTODOC_OVERRIDE: ${{ inputs.override }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           PYTHONPATH: autodoc
         run: python autodoc/analyzer/main.py
 
-      #JSON
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: autodoc-report
           path: reports/output.json
 
-      #PDF
       - name: Upload PDF
         uses: actions/upload-artifact@v4
         with:
@@ -83,22 +73,19 @@ jobs:
     needs: autodoc
 
     steps:
-      - name: Checkout AutoDoc source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      - name: Download report
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: autodoc-report
           path: reports/
 
-      - name: Run blocking check
+      - run: python -m analyzer.check_blocking
         env:
           PYTHONPATH: autodoc
-        run: python -m analyzer.check_blocking
 
 
   review-check:
@@ -106,20 +93,20 @@ jobs:
     needs: autodoc
 
     steps:
-      - name: Checkout AutoDoc source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: emaafe/autodoc
           path: autodoc
 
-      - name: Download report
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: autodoc-report
           path: reports/
 
-      - name: Run review check
+      - run: python -m analyzer.check_review
         env:
-          AUTODOC_OVERRIDE: ${{ inputs.override }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PYTHONPATH: autodoc
-        run: python -m analyzer.check_review

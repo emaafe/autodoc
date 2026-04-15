@@ -93,7 +93,7 @@ def format_method(entry: dict) -> str:
     jd = method_data.get("javadoc", {})
 
     name = method_data.get("method_name", "unknown")
-    description = jd.get("purpose") or jd.get("description", "")
+    description = jd.get("description", "")
     reason = extract_reason(entry)
 
     result = f"- `{name}`"

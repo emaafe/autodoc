@@ -4,10 +4,9 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      override:
-        description: "Override NEEDS REVIEW"
-        required: true
-        default: "false"
+      pr_number:
+        description: "Pull Request number to approve"
+        required: false
 
 permissions:
   contents: write
@@ -17,6 +16,6 @@ jobs:
   autodoc:
     uses: emaafe/autodoc/.github/workflows/autodoc.yml@main
     with:
-      override: ${{ github.event.inputs.override }}
+      pr_number: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
     secrets:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
