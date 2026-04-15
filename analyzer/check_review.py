@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 from analyzer.ci_policy_loader import load_ci_policy
+from datetime import datetime, timezone
 
 
 def main():
@@ -52,7 +53,7 @@ def main():
         parts = []
 
         if include_timestamp:
-            parts.append(datetime.utcnow().isoformat())
+            parts.append(datetime.now(timezone.utc).isoformat())
 
         if include_user:
             parts.append(f"user={actor}")

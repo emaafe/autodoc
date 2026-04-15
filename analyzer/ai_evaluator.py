@@ -11,7 +11,7 @@ from analyzer.prompt_builder import build_prompt
 # Configuración
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-1.5-flash-latest")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 def evaluate_with_ai(method: dict[str, Any]) -> dict[str, Any]:
