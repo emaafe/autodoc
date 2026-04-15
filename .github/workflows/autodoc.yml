@@ -18,7 +18,7 @@ jobs:
       - name: Checkout target repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Checkout AutoDoc source
         uses: actions/checkout@v4
