@@ -1,13 +1,22 @@
 from __future__ import annotations
+
 import yaml
 from pathlib import Path
 
 
-def load_ci_policy(path: str = "policy/ci-policy.yaml") -> dict:
-    file_path = Path(path)
+def _get_autodoc_base_path() -> Path:
+    """
+    Devuelve la raíz del proyecto AutoDoc
+    """
+    return Path(__file__).resolve().parent.parent
 
-    if not file_path.exists():
+
+def load_ci_policy() -> dict:
+    base_path = _get_autodoc_base_path()
+    path = base_path / "policy" / "ci-policy.yaml"
+
+    if not path.exists():
         raise FileNotFoundError(f"CI Policy file not found: {path}")
 
-    with file_path.open("r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
