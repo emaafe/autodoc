@@ -2,9 +2,7 @@ ci_control:
   override:
     enabled: true
     allowed_users:
-      - tech-lead
-      - architect
-      - senior-dev
+      - emaafe
 
   review_behavior:
     block_on_needs_review: true
