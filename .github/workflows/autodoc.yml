@@ -4,7 +4,6 @@ on:
   workflow_call:
     inputs:
       override:
-        description: "Override NEEDS REVIEW (true/false)"
         required: false
         type: string
         default: "false"
@@ -17,21 +16,12 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
-    outputs:
-      report-path: reports/output.json
-
     steps:
-      - name: Checkout repository
+      - name: Checkout target repo
         uses: actions/checkout@v4
-
-      - name: Checkout AutoDoc
-        uses: actions/checkout@v4
-        with:
-          repository: emaafe/autodoc
-          path: autodoc
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,8 +29,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install -r autodoc/requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run AutoDoc
         env:
@@ -49,8 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          python autodoc/analyzer/main.py
+        run: python -m analyzer.main
 
       - name: Upload report
         uses: actions/upload-artifact@v4
@@ -58,45 +46,30 @@ jobs:
           name: autodoc-report
           path: reports/output.json
 
-      - name: Upload PDF
-        uses: actions/upload-artifact@v4
-        with:
-          name: autodoc-pdf
-          path: reports/output.pdf
 
   blocking-check:
     runs-on: ubuntu-latest
     needs: autodoc
 
     steps:
-      - name: Checkout AutoDoc
-        uses: actions/checkout@v4
-        with:
-          repository: emaafe/autodoc
-          path: autodoc
+      - uses: actions/checkout@v4
 
-      - name: Download report
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: autodoc-report
           path: reports/
 
-      - name: Run blocking check
-        run: python autodoc/analyzer/check_blocking.py
+      - run: python -m analyzer.check_blocking
+
 
   review-check:
     runs-on: ubuntu-latest
     needs: autodoc
 
     steps:
-      - name: Checkout AutoDoc
-        uses: actions/checkout@v4
-        with:
-          repository: emaafe/autodoc
-          path: autodoc
+      - uses: actions/checkout@v4
 
-      - name: Download report
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: autodoc-report
           path: reports/
@@ -104,4 +77,4 @@ jobs:
       - name: Run review check
         env:
           AUTODOC_OVERRIDE: ${{ inputs.override }}
-        run: python autodoc/analyzer/check_review.py
+        run: python -m analyzer.check_review
