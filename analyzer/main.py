@@ -33,7 +33,7 @@ def main():
 
             all_results.append({
                 "file": file,
-                "method": method["method_name"],
+                "method": method,
                 "final_status": final["final_status"],
                 "details": final
             })
