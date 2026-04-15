@@ -1,0 +1,81 @@
+name: AutoDoc - Documentation Consistency
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+  workflow_dispatch:
+    inputs:
+      override:
+        description: "Override NEEDS REVIEW (true/false)"
+        required: true
+        default: "false"
+
+jobs:
+  autodoc:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run AutoDoc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTODOC_OVERRIDE: ${{ github.event.inputs.override }}
+        run: python -m analyzer.main
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: autodoc-report
+          path: reports/output.json
+
+  blocking-check:
+    runs-on: ubuntu-latest
+    needs: autodoc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: autodoc-report
+          path: reports/
+
+      - name: Blocking check
+        run: python analyzer/check_blocking.py
+
+  review-check:
+    runs-on: ubuntu-latest
+    needs: autodoc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: autodoc-report
+          path: reports/
+
+      - name: Review check
+        env:
+          AUTODOC_OVERRIDE: ${{ github.event.inputs.override }}
+        run: python analyzer/check_review.py

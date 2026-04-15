@@ -1,0 +1,4 @@
+2026-04-15T02:27:34.796643 | user=unauthorized | NEEDS REVIEW detected
+2026-04-15T02:27:34.797928 | user=unauthorized | Override denied for user: unauthorized
+2026-04-15T02:27:35.024346 | user=tech-lead | NEEDS REVIEW detected
+2026-04-15T02:27:35.024946 | user=tech-lead | Override approved by authorized user: tech-lead

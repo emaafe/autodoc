@@ -1,0 +1,48 @@
+name: AutoDoc Documentation
+
+on:
+  pull_request:
+
+jobs:
+  autodoc:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Checkout AutoDoc
+        uses: actions/checkout@v4
+        with:
+          repository: TU_USUARIO/AutoDoc
+          path: autodoc
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r autodoc/requirements.txt
+
+      - name: Run AutoDoc
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python autodoc/analyzer/main.py
+
+      - name: Commit documentation
+        if: github.actor != 'github-actions[bot]'
+        run: |
+          git config user.name "AutoDoc Bot"
+          git config user.email "autodoc@bot.com"
+
+          git add docs/
+          git commit -m "AutoDoc: update documentation" || echo "No changes"
+
+          git push

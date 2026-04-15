@@ -1,0 +1,26 @@
+ci_control:
+  override:
+    enabled: true
+    allowed_users:
+      - tech-lead
+      - architect
+      - senior-dev
+
+  review_behavior:
+    block_on_needs_review: true
+    require_override: true
+
+  logging:
+    enabled: true
+    include_user: true
+    include_timestamp: true
+
+  pr_comment:
+    enabled: true
+    include_summary: true
+
+  pdf_report:
+    enabled: true
+    output_path: "reports/output.pdf"
+    include_methods: true
+    include_issues: true

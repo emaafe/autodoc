@@ -1,0 +1,92 @@
+policy:
+  name: "Java Documentation Governance Model"
+  version: "1.0.0"
+  description: "Modelo de gobernanza documental automatizada para proyectos Java."
+
+defaults:
+  min_summary_chars: 15
+
+visibility_rules:
+  private:
+    required:
+      - summary_text
+    optional:
+      - param
+      - return
+      - throws
+      - notes
+    behavior:
+      missing_required: error
+      missing_optional: warning
+
+  protected:
+    required:
+      - summary_text_or_purpose
+      - param_for_each
+      - return_if_not_void
+      - throws_if_present_in_signature
+    optional:
+      - example
+      - ticket
+      - requirements
+      - sideEffects
+      - notes
+      - since
+    behavior:
+      missing_required: error
+      missing_optional: warning
+
+  public:
+    required:
+      - summary_text_or_purpose
+      - param_for_each
+      - return_if_not_void
+      - throws_if_present_in_signature
+    optional:
+      - example
+      - ticket
+      - requirements
+      - sideEffects
+      - notes
+      - since
+    behavior:
+      missing_required: error
+      missing_optional: warning
+
+exemptions:
+  getters_setters_trivial: true
+  inherit_doc_override: true
+
+auto_enrichment:
+  uses_injection: true
+  uses_scope: "files_in_PR"
+  detect_framework: true
+
+build_inspection:
+  detect_build_tool: true
+  maven:
+    enabled: true
+    dependency_list_cmd: "mvn -q dependency:list -DincludeScope=compile"
+    dependency_tree_cmd: "mvn -q dependency:tree"
+  gradle:
+    enabled: true
+    dependency_cmd: "./gradlew dependencies --configuration compileClasspath"
+  include_transitive: false
+
+git_integration:
+  author_strategy: "prefer_class_tag_then_first_committer"
+  include_git_summary_in_pdf: true
+  include_git_link: true
+
+ai_reviewer:
+  enabled: true
+  scope: "files_in_PR"
+  auto_block_merge: false
+  require_human_review_if_flagged: true
+
+pdf_generation:
+  mode: "adaptive"
+  include_index: true
+  include_bookmarks: true
+  include_dependency_section: true
+  include_git_summary: true
